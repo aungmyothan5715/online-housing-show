@@ -1,6 +1,7 @@
 package com.example.backendapi.domain.service;
 
 import com.example.backendapi.domain.model.Housing;
+import com.example.backendapi.domain.model.Owner;
 import com.example.backendapi.domain.page.PaginationDto;
 import com.example.backendapi.domain.repo.HousingRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,10 @@ import java.util.List;
 public class HousingService {
     @Autowired
     private HousingRepo housingRepo;
+
+    public void saveHousing(Housing request) {
+        housingRepo.save(request);
+    }
 
     public PaginationDto<Housing> getAllHousing(int pageNum, int pageSize) {
         Pageable pageable = PageRequest.of(pageNum, pageSize);

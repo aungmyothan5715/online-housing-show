@@ -5,10 +5,13 @@ import com.example.backendapi.domain.dto.LoginRequest;
 import com.example.backendapi.domain.model.Housing;
 import com.example.backendapi.domain.model.Owner;
 import com.example.backendapi.domain.page.PaginationDto;
+import com.example.backendapi.domain.repo.OwnerRepo;
 import com.example.backendapi.domain.service.HousingService;
 import com.example.backendapi.domain.service.OwnerService;
+import com.example.backendapi.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.MultiValueMap;
 import org.springframework.validation.BindingResult;
@@ -36,11 +40,15 @@ public class PublicController {
     @Autowired
     private OwnerService ownerService;
     @Autowired
+    private OwnerRepo ownerRepo;
+    @Autowired
     private HousingService housingService;
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthenticationManager authenticationManager;
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE})
     public ResponseEntity<?> register(@RequestParam("ownerUserName") String ownerUserName,
@@ -87,10 +95,20 @@ public class PublicController {
                     new UsernamePasswordAuthenticationToken(request.getOwnerEmail(), request.getPassword())
             );
 
-            //Authentication successful.
-            //work somethings
+            //get Username
+            String username = authentication.getName();
 
-            return ResponseEntity.ok("Login successfull.");
+            //Generate token from tokenProvider
+            String token = jwtTokenProvider.generateToken(username);
+
+            //Set the token response on header
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Authorization", "Bearer " + token);
+
+            //Authentication successful.
+
+
+            return ResponseEntity.ok().headers(headers).body(username + " is Login successful.");
         }catch (AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
         }
@@ -99,7 +117,7 @@ public class PublicController {
 
     @PostMapping("/create")
    // @PreAuthorize("hasRole('ROLE_OWNER')")
-    public ResponseEntity<?> create(@Validated @RequestBody HousingRequest request, BindingResult bindingResult) {
+    public ResponseEntity<?> create(@Validated @RequestBody Housing request,Authentication authentication, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             List<String> errorMessages = bindingResult.getFieldErrors()
                     .stream()
@@ -108,14 +126,38 @@ public class PublicController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessages);
         }
 
-        // save housing post
+        //check authentication
+        if (authentication != null && authentication.isAuthenticated()) {
+            //get username or email
+            String email = authentication.getName();
 
-        return ResponseEntity.ok().body(request);
+            //retrieve the user from database
+            Owner owner = ownerRepo.findOwnerByOwnerEmail(email);
+            //create post
+            Housing housingPost = new Housing();
+            housingPost.setHousingName(request.getHousingName());
+            housingPost.setAddress(request.getAddress());
+            housingPost.setNumberOfFloor(request.getNumberOfFloor());
+            housingPost.setNumberOfMasterRoom(request.getNumberOfMasterRoom());
+            housingPost.setNumberOfSingleRoom(request.getNumberOfSingleRoom());
+            housingPost.setAmount(request.getAmount());
+            housingPost.setCreatedDate(LocalDateTime.now());
+            housingPost.setUpdatedDate(LocalDateTime.now());
+            housingPost.setOwner(owner);
+
+            //save housinig
+            housingService.saveHousing(housingPost);
+            return ResponseEntity.ok().body("Post created by " + owner);
+
+        }else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User is not authenticated!");
+        }
+
     }
 
     @PostMapping("/housing/update")
     //@PreAuthorize("hasRole('ROLE_OWNER')")
-    public ResponseEntity<?> update(@Validated @RequestBody HousingRequest request, BindingResult bindingResult) {
+    public ResponseEntity<?> update(@Validated @RequestBody HousingRequest request,Authentication authentication, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             List<String> errorMessages = bindingResult.getFieldErrors()
                     .stream()
@@ -124,7 +166,8 @@ public class PublicController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessages);
         }
 
-        //update housing post
+
+
 
         return ResponseEntity.ok(request);
     }

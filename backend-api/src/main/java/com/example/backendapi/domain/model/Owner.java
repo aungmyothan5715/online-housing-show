@@ -37,11 +37,6 @@ public class Owner implements UserDetails{
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 
-
-    public enum Role {
-        OWNER
-    }
-
     public Owner() {}
 
     @Override
