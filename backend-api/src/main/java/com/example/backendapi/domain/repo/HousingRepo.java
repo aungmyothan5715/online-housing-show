@@ -66,7 +66,6 @@ public interface HousingRepo extends JpaRepository<Housing, Integer> {
             Pageable pageable
     );
 
-
 }
 
 
