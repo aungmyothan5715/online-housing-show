@@ -1,5 +1,6 @@
 package com.example.backendapi.domain.model;
 
+import lombok.Builder;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +13,7 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Data
@@ -41,10 +43,8 @@ public class Owner implements UserDetails{
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_OWNER"),
-                new SimpleGrantedAuthority("ROLE_ADMIN"),
-                new SimpleGrantedAuthority("ROLE_USER")
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_OWNER")
         );
     }
 

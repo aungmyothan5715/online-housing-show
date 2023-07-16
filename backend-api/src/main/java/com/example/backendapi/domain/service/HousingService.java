@@ -42,6 +42,16 @@ public class HousingService {
         paginationDto.setTotalElements(housingPage.getTotalElements());
         return paginationDto;
     }
+    public PaginationDto<Housing> searchByAmount(String amount, int pageNum, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNum, pageSize);
+        Page<Housing> housingPage = housingRepo.findByHousingNameIgnoreCaseContaining(amount, pageable);
+
+        PaginationDto<Housing> paginationDto = new PaginationDto<>();
+        paginationDto.setData(housingPage.getContent());
+        paginationDto.setTotalPages(housingPage.getTotalPages());
+        paginationDto.setTotalElements(housingPage.getTotalElements());
+        return paginationDto;
+    }
 
 
 }

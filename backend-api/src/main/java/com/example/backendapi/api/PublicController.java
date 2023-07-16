@@ -6,28 +6,23 @@ import com.example.backendapi.domain.model.Housing;
 import com.example.backendapi.domain.model.Owner;
 import com.example.backendapi.domain.page.PaginationDto;
 import com.example.backendapi.domain.repo.OwnerRepo;
+import com.example.backendapi.domain.service.AuthenticationService;
 import com.example.backendapi.domain.service.HousingService;
 import com.example.backendapi.domain.service.OwnerService;
-import com.example.backendapi.security.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.util.MultiValueMap;
+import org.springframework.security.core.annotation.CurrentSecurityContext;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.constraints.NotBlank;
+import java.nio.file.attribute.UserPrincipal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,17 +33,16 @@ import java.util.stream.Collectors;
 public class PublicController {
 
     @Autowired
+    private AuthenticationService authService;
+    @Autowired
     private OwnerService ownerService;
     @Autowired
     private OwnerRepo ownerRepo;
     @Autowired
     private HousingService housingService;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+
     @Autowired
     private AuthenticationManager authenticationManager;
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
 
     @PostMapping(value = "/register", consumes = {MediaType.APPLICATION_FORM_URLENCODED_VALUE})
     public ResponseEntity<?> register(@RequestParam("ownerUserName") String ownerUserName,
@@ -57,25 +51,12 @@ public class PublicController {
                                       @RequestParam("password")String password
                                       ) {
 
-        boolean isValid = ownerService.isEmailValid(ownerEmail);
-
-        if (isValid) {
-            throw new RuntimeException("Email is invalid!");
-            //return ResponseEntity.ok("Email is invalid!");
-        }
 
 
-        Owner owner = new Owner();
-        owner.setOwnerUserName(ownerUserName);
-        owner.setOwnerName(ownerName);
-        owner.setOwnerEmail(ownerEmail);
-        owner.setPassword(passwordEncoder.encode(password));
-        owner.setCreatedDate(LocalDateTime.now());
-        owner.setUpdatedDate(LocalDateTime.now());
+        ownerService.saveOwner(ownerUserName, ownerName, ownerEmail, password);
 
-        ownerService.saveOwner(owner);
+        return ResponseEntity.ok().body("Register Successfull.");
 
-        return ResponseEntity.ok().body(owner);
 
     }
 
@@ -89,35 +70,12 @@ public class PublicController {
                     .collect(Collectors.toList());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessages);
         }
-
-        try{
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getOwnerEmail(), request.getPassword())
-            );
-
-            //get Username
-            String username = authentication.getName();
-
-            //Generate token from tokenProvider
-            String token = jwtTokenProvider.generateToken(username);
-
-            //Set the token response on header
-            HttpHeaders headers = new HttpHeaders();
-            headers.add("Authorization", "Bearer " + token);
-
-            //Authentication successful.
-
-
-            return ResponseEntity.ok().headers(headers).body(username + " is Login successful.");
-        }catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
-        }
-
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @PostMapping("/create")
    // @PreAuthorize("hasRole('ROLE_OWNER')")
-    public ResponseEntity<?> create(@Validated @RequestBody Housing request,Authentication authentication, BindingResult bindingResult) {
+    public ResponseEntity<?> create(@Validated @RequestBody Housing request, @CurrentSecurityContext UserPrincipal userPrincipal, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             List<String> errorMessages = bindingResult.getFieldErrors()
                     .stream()
@@ -127,12 +85,14 @@ public class PublicController {
         }
 
         //check authentication
-        if (authentication != null && authentication.isAuthenticated()) {
-            //get username or email
-            String email = authentication.getName();
+        //retrieve the user from database
+        Owner owner = ownerRepo.findOwnerByOwnerEmail(userPrincipal.getName()).orElseThrow(() ->new UsernameNotFoundException("Username "+userPrincipal.getName()+" not found!"));
 
-            //retrieve the user from database
-            Owner owner = ownerRepo.findOwnerByOwnerEmail(email);
+        if (userPrincipal.getName() != null && owner.getOwnerEmail() != null) {
+            //get username or email
+            String email = userPrincipal.getName();
+
+
             //create post
             Housing housingPost = new Housing();
             housingPost.setHousingName(request.getHousingName());
@@ -185,6 +145,7 @@ public class PublicController {
     //search by address , name , floor , createdDate
 
     //http://localhost:8080/api/public/housing/search?name=one  <- one is keyword
+    //localhost:8080/api/public/housing/search?name=dream&page=1  <- search with pagination
     @GetMapping("/housing/search")
     public PaginationDto<Housing> searchByHousingName(
             @RequestParam String name,
@@ -192,6 +153,14 @@ public class PublicController {
             @RequestParam(defaultValue = "5") int size) {
 
         return housingService.searchByHousingName(name, page, size);
+    }
+
+    @GetMapping("/housing/search")
+    public PaginationDto<Housing> searchByAmount(
+            @RequestParam String amount,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        return housingService.searchByAmount(amount, page, size);
     }
 
 

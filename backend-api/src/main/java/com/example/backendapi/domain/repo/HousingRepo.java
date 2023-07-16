@@ -10,4 +10,6 @@ import java.util.List;
 public interface HousingRepo extends JpaRepository<Housing, Integer> {
     Page<Housing> findAll(Pageable pageable);
     Page<Housing> findByHousingNameIgnoreCaseContaining(String housingName, Pageable pageable);
+
+    Page<Housing> findByAmountIgnoreCaseContaining(String amount, Pageable pageable);
 }
