@@ -48,14 +48,13 @@ public class OwnerService {
                 new UsernamePasswordAuthenticationToken(request.getOwnerEmail(),request.getPassword())
         );
         var user = ownerRepo.findOwnerByOwnerEmail(request.getOwnerEmail()).orElseThrow();
-        var jwtToken = jwtService.generateToken(user);
+        String jwtToken = jwtService.generateToken(user);
 
-        HttpHeaders header = new HttpHeaders();
-        header.add("Authorization", "Bearer " + jwtToken);
         return LoginResponse.builder()
                 .ownerEmail(request.getOwnerEmail())
                 .password(request.getPassword())
                 .token(jwtToken).build();
     }
+
 
 }

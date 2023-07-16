@@ -1,5 +1,4 @@
 package com.example.backendapi.domain.dto;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,7 +9,6 @@ import javax.validation.constraints.NotBlank;
 @AllArgsConstructor
 @NoArgsConstructor
 public class HousingRequest {
-    private int id;
     @NotBlank(message = "Housing name is required!")
     private String housingName;
     @NotBlank(message = "Address is required!")
