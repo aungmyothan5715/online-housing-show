@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/backend-api/backend-api.iml" filepath="$PROJECT_DIR$/backend-api/backend-api.iml" />
+      <module fileurl="file://$PROJECT_DIR$/my-auth/my-auth.iml" filepath="$PROJECT_DIR$/my-auth/my-auth.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/show-housing.iml" filepath="$PROJECT_DIR$/.idea/show-housing.iml" />
     </modules>
   </component>

@@ -12,4 +12,6 @@ public class LoginResponse {
     private String ownerEmail;
     private String password;
     private String token;
+
+
 }

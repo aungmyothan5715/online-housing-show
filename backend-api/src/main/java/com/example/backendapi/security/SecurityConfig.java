@@ -26,6 +26,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests()
                 .antMatchers("/api/public/**")
                 .permitAll()
+                .antMatchers("/api/private/**").hasAuthority("ROLE_OWNER")
                 .anyRequest()
                 .authenticated()
                 .and()
